@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ticket-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../src:/var/www/html/frontend/src
+      - ../public:/var/www/html/frontend/public
+      - ../package.json:/var/www/html/frontend/package.json
+      - ../package-lock.json:/var/www/html/frontend/package-lock.json
+      - node_modules:/var/www/html/frontend/node_modules
+    networks:
+      - ticket
+
+# ==============================
+# Volumes
+# ==============================
+volumes:
+  node_modules:
+
+# ==============================
+# Network
+# ==============================
+networks:
+  ticket:
+    external:
+      name: backendtp_ticket
