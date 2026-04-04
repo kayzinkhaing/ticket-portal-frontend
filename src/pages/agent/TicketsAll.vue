@@ -1,66 +1,48 @@
 <script setup>
-import { ref, watch } from "vue";
 import TicketPageLayout from "@/components/TicketPageLayout.vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
 import { useTickets } from "@/composables/useTickets";
 
-// ------------------------------
-// 1️⃣ Choose scope: agent / client
-const scope = "all"; // agent side
-// const scope = "organization"; // client side
+// scope
+const scope = "all";
 
-// ------------------------------
-// 2️⃣ Composable
+// ✅ use ONLY filters
 const {
   tickets,
   stats,
-  activeFilter,
-  searchQuery,
-  priorityFilter,
-  organizationFilter,
   currentPage,
   lastPage,
   loading,
   error,
+  filters,
   fetchTickets,
 } = useTickets({ scope });
 
-// ------------------------------
-// 3️⃣ Pagination handler
+// ✅ Pagination
 const handlePage = (page) => {
   if (page < 1 || page > lastPage.value) return;
   currentPage.value = page;
   fetchTickets(page);
 };
 
-// ------------------------------
-// 4️⃣ Filters handler
-const handleFilters = () => {
+// ✅ Filters
+const handleFilters = (f) => {
+  console.log("RECEIVED FILTERS:", f);
+
+  filters.value = { ...f };
   currentPage.value = 1;
   fetchTickets(1);
 };
-
-// ------------------------------
-// 5️⃣ Watch filters / search changes
-watch(
-  [searchQuery, activeFilter, priorityFilter, organizationFilter],
-  () => {
-    handleFilters();
-  }
-);
 </script>
 
 <template>
   <div>
-    <!-- Loading -->
     <LoadingSpinner v-if="loading" size="lg" color="primary" />
 
-    <!-- Error -->
     <p v-else-if="error" class="text-red-500 p-10 text-center">
       Failed to load tickets.
     </p>
 
-    <!-- Tickets -->
     <TicketPageLayout
       v-else
       title="All Tickets"
@@ -69,10 +51,6 @@ watch(
       :stats="stats"
       :currentPage="currentPage"
       :lastPage="lastPage"
-      v-model:activeFilter="activeFilter"
-      v-model:searchQuery="searchQuery"
-      v-model:priorityFilter="priorityFilter"
-      v-model:organizationFilter="organizationFilter"
       @update:filters="handleFilters"
       @update:currentPage="handlePage"
       mode="agent"
