@@ -4,7 +4,7 @@
       <div v-if="isChild" class="absolute -left-6 top-[-12px] bottom-1/2 w-4 border-l-2 border-b-2 border-white/10 rounded-bl-xl"></div>
       
       <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 border border-violet-500/30 flex items-center justify-center text-[11px] font-black text-white shadow-lg z-10">
-        {{ comment.user_id }}
+        {{ getUserInitials(comment.user?.first_name, comment.user?.last_name, comment.user_id) }}
       </div>
 
       <div class="flex-1 min-w-0">
@@ -15,9 +15,11 @@
           ]"
         >
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-[12px] font-bold text-violet-300">User #{{ comment.user_id }}</span>
+            <span class="text-[12px] font-bold text-violet-300">
+              {{ getUserName(comment.user?.first_name, comment.user?.last_name, comment.user_id) }}
+            </span>
             <span class="w-1 h-1 rounded-full bg-white/20"></span>
-            <span class="text-[10px] text-gray-500 font-medium">{{ formatDate(comment.created_at) }}</span>
+            <span class="text-[10px] text-gray-500 font-medium">{{ formatDate(comment.created_at || comment.updated_at) }}</span>
             <span v-if="comment.is_internal" class="text-[8px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full uppercase font-black tracking-tighter ml-1">Internal</span>
           </div>
           <p class="text-[13px] text-gray-200 leading-relaxed break-words font-light">{{ comment.content }}</p>
@@ -49,9 +51,56 @@
 <script setup>
 defineProps({ comment: Object, isChild: Boolean });
 defineEmits(['reply']);
-const formatDate = (d) => {
-  if(!d) return '';
-  const date = new Date(d);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+const getUserInitials = (firstName, lastName, userId) => {
+  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  if (firstName) return firstName[0].toUpperCase();
+  if (lastName) return lastName[0].toUpperCase();
+  return userId ? `U${userId}` : '?';
+};
+
+const getUserName = (firstName, lastName, userId) => {
+  if (firstName && lastName) return `${firstName} ${lastName}`;
+  if (firstName) return firstName;
+  if (lastName) return lastName;
+  return `User #${userId || '?'}`;
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'Unknown date';
+  try {
+    // Convert "YYYY-MM-DD HH:MM:SS" to ISO format if needed
+    let date = new Date(dateString);
+    if (isNaN(date.getTime()) && typeof dateString === 'string' && dateString.includes(' ')) {
+      date = new Date(dateString.replace(' ', 'T'));
+    }
+    if (isNaN(date.getTime())) return 'Invalid date';
+    
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSecs = Math.floor(diffMs / 1000);
+    
+    if (diffSecs < 0) return 'Just now'; // future date (timezone offset)
+    if (diffSecs < 5) return 'Just now';
+    if (diffSecs < 60) return `${diffSecs} seconds ago`;
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    const diffWeeks = Math.floor(diffDays / 7);
+    if (diffWeeks === 1) return 'Last week';
+    if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths === 1) return 'Last month';
+    if (diffMonths < 12) return `${diffMonths} months ago`;
+    const diffYears = Math.floor(diffDays / 365);
+    if (diffYears === 1) return 'Last year';
+    return `${diffYears} years ago`;
+  } catch (e) {
+    return 'Invalid date';
+  }
 };
 </script>
