@@ -19,7 +19,7 @@
 
 <script setup>
 defineProps({
-  id: String,
+  id: Number,
   priority: String,
   time: [String, Number],
   colorClass: String,
