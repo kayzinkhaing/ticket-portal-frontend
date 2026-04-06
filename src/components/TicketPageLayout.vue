@@ -1,6 +1,6 @@
 <template>
   <div class="px-7 py-7 space-y-5">
-    <!-- HEADER -->
+    <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-[20px] font-semibold tracking-tight text-[#e8eaf6]">
@@ -20,7 +20,7 @@
       </button>
     </div>
 
-    <!-- STATS -->
+    <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
         v-for="(count, key) in mainStatusStats"
@@ -31,126 +31,127 @@
       />
     </div>
 
-    <!-- FILTERS -->
-    <!-- <TicketFilters
-      :model-value="activeFilter"
-      :availableStatuses="['All','Open','In Progress','Resolved','Closed','Unassigned','Overdue']"
-      @update:model-value="emit('update:activeFilter', $event)"
-      @search="emit('update:searchQuery', $event)"
-    /> -->
-    <AdvancedSearch @update:filters="emit('update:filters', $event)" />
+    <!-- Filters -->
+    <AdvancedSearch
+      :initialFilters="filters"
+      :statuses="statuses"
+      :priorities="priorities"
+      :organizations="organizations"
+      :hideOrg="hideOrg"
+      @update:filters="emit('update:filters', $event)"
+    />
 
-    <!-- TABLE -->
-    <TicketTable :tickets="filtered || []" :mode="mode" />
+    <!-- Table + Loading Overlay -->
+    <div class="relative z-0">
+      <div
+        v-if="tableLoading"
+        class="absolute inset-0 bg-black/40 flex items-center justify-center z-10"
+      >
+        <LoadingSpinner size="sm" />
+      </div>
 
-    <!-- PAGINATION -->
-<div
-  v-if="lastPage > 1"
-  class="flex items-center justify-between bg-[#161824]/50 p-4 rounded-xl border border-white/5 mt-4"
->
-  <!-- Info -->
-  <div class="text-[12px] text-[#6b7280]">
-    Showing page <span class="text-white font-mono">{{ currentPage }}</span>
-    of {{ lastPage }}
-  </div>
+      <TicketTable :tickets="filtered || []" :mode="mode" />
+    </div>
 
-  <!-- Page Buttons -->
-  <div class="flex gap-1 items-center">
-    <!-- Previous Button -->
-    <button
-      @click="prevPage"
-      :disabled="currentPage === 1"
-      class="px-3 py-1 text-[11px] font-bold rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-20"
+    <!-- Pagination -->
+    <div
+      v-if="lastPage > 1"
+      class="flex items-center justify-between bg-[#161824]/50 p-4 rounded-xl border border-white/5 mt-4"
     >
-      &laquo; Prev
-    </button>
+      <div class="text-[12px] text-[#6b7280]">
+        Showing page
+        <span class="text-white font-mono">{{ currentPage }}</span> of
+        {{ lastPage }}
+      </div>
 
-    <!-- Numbered Pages -->
-    <button
-      v-for="p in lastPage"
-      :key="p"
-      @click="emit('update:currentPage', p)"
-      :class="[
-        'px-3 py-1 text-[11px] font-bold rounded-lg border border-white/10 hover:bg-white/10',
-        p === currentPage ? 'bg-[#4f46e5] text-white hover:bg-[#4338ca]' : 'bg-white/5 text-[#e8eaf6]'
-      ]"
-    >
-      {{ p }}
-    </button>
+      <div class="flex gap-1 items-center">
+        <button
+          @click="prevPage"
+          :disabled="currentPage === 1"
+          class="px-3 py-1 text-[11px] font-bold rounded-lg bg-white/5 border border-white/10 disabled:opacity-20"
+        >
+          &laquo; Prev
+        </button>
 
-    <!-- Next Button -->
-    <button
-      @click="nextPage"
-      :disabled="currentPage === lastPage"
-      class="px-3 py-1 text-[11px] font-bold rounded-lg bg-[#4f46e5] text-white hover:bg-[#4338ca] disabled:opacity-20"
-    >
-      Next &raquo;
-    </button>
-  </div>
-</div>
+        <button
+          v-for="p in lastPage"
+          :key="p"
+          @click="emit('update:currentPage', p)"
+          :class="[
+            p === currentPage
+              ? 'bg-[#4f46e5] text-white'
+              : 'bg-white/5 text-[#e8eaf6]',
+          ]"
+          class="px-3 py-1 text-[11px] font-bold rounded-lg border border-white/10"
+        >
+          {{ p }}
+        </button>
+
+        <button
+          @click="nextPage"
+          :disabled="currentPage === lastPage"
+          class="px-3 py-1 text-[11px] font-bold rounded-lg bg-[#4f46e5] text-white"
+        >
+          Next &raquo;
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+
 import StatCard from "@/components/StatCard.vue";
-import TicketFilters from "@/components/TicketFilters.vue";
 import AdvancedSearch from "@/components/AdvancedSearch.vue";
 import TicketTable from "@/components/TicketTable.vue";
-
-const router = useRouter();
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 
 const props = defineProps({
   title: String,
   subtitle: String,
   stats: Object,
   filtered: Array,
-  activeFilter: String,
-  searchQuery: String,
-  priorityFilter: String,
-  organizationFilter: String,
+  hideOrg: Boolean,
+  filters: Object,
   mode: String,
   currentPage: Number,
   lastPage: Number,
+  tableLoading: Boolean,
+  statuses: Array,
+  priorities: Array,
+  organizations: Array,
 });
 
-// const emit = defineEmits([
-//   "update:activeFilter",
-//   "update:searchQuery",
-//   "update:currentPage",
-// ]);
-const emit = defineEmits([
-  "update:filters",
-  "update:currentPage",
-]);
+const emit = defineEmits(["update:filters", "update:currentPage"]);
 
-function nextPage() {
-  if (props.currentPage < props.lastPage) {
-    emit("update:currentPage", props.currentPage + 1);
-  }
-}
+const router = useRouter();
 
-function prevPage() {
-  if (props.currentPage > 1) {
-    emit("update:currentPage", props.currentPage - 1);
-  }
-}
-
+// Only re-compute stats when `stats` object changes
 const mainStatusStats = computed(() => {
   if (!props.stats) return {};
   const allowedKeys = ["open", "in_progress", "resolved", "closed"];
-  return Object.keys(props.stats)
-    .filter((key) => allowedKeys.includes(key.toLowerCase()))
-    .reduce((obj, key) => {
-      obj[key] = props.stats[key];
-      return obj;
-    }, {});
+  const obj = {};
+  for (const key in props.stats) {
+    const lower = key.toLowerCase();
+    if (allowedKeys.includes(lower)) {
+      obj[lower] = props.stats[key]; // ✅ always lowercase keys
+    }
+  }
+  return obj;
 });
+console.log("mainStatusStats:", mainStatusStats.value);
 
-const formatLabel = (str) => str.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+// Label formatter
+const formatLabel = (str) =>
+  str.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
-function handleCreate() {
-  router.push("/client/create-ticket");
-}
+// Navigation
+const handleCreate = () => router.push("/client/create-ticket");
+const nextPage = () =>
+  props.currentPage < props.lastPage &&
+  emit("update:currentPage", props.currentPage + 1);
+const prevPage = () =>
+  props.currentPage > 1 && emit("update:currentPage", props.currentPage - 1);
 </script>

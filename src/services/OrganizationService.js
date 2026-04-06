@@ -5,7 +5,6 @@ export const OrganizationService = {
   // Get all organizations
   getAll: async () => {
     const res = await api.get(ROUTES.organizations.list);
-    // ✅ Return the array directly
     return res.data.data.organizations || [];
   },
 

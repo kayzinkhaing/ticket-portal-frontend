@@ -38,12 +38,6 @@ export const TicketService = {
   }
 },
 
-  // advancedSearch: (filters = {}, page = 1) => {
-  //   // filters: { statusIds: [], priorityIds: [], keyword: '', dateFrom: '', dateTo: '' }
-  //   return api.get(ROUTES.tickets.ticketAdvancedSearch, {
-  //     params: { ...filters, page },
-  //   });
-  // },
   
 advancedSearch: (filters) => {
   const params = {};

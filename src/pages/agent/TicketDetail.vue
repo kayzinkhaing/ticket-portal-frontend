@@ -167,26 +167,62 @@ const showSuccessToast = ref(false);
 
 // CRITICAL: Logic to ensure structure is ALWAYS a tree
 const threadedComments = computed(() => {
-  const allComments = [...ticket.value.comments];
+  // 1. Ensure we have an array to work with
+  const allComments = Array.isArray(ticket.value.comments) ? [...ticket.value.comments] : [];
   const map = {};
   const roots = [];
 
-  // Create lookup map
+  // 2. Initialize the map with fresh reply arrays
   allComments.forEach(c => {
     map[c.id] = { ...c, replies: [] };
   });
 
-  // Link children to parents
+  // 3. Build the tree
   allComments.forEach(c => {
+    const commentWithReplies = map[c.id];
+    // Check for parent_id (ensure it's treated as a number/string consistently)
     if (c.parent_id && map[c.parent_id]) {
-      map[c.parent_id].replies.push(map[c.id]);
-    } else if (!c.parent_id) {
-      roots.push(map[c.id]);
+      map[c.parent_id].replies.push(commentWithReplies);
+    } else {
+      roots.push(commentWithReplies);
     }
   });
 
+  // 4. Sort: Newest parent comments at the top
   return roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
+
+// Update submitComment to handle the response better
+const submitComment = async (parentId = null) => {
+  const content = parentId ? replyText.value : newCommentText.value;
+  if (!content.trim()) return;
+  
+  try {
+    submitting.value = true;
+    const res = await CommentService.create({
+      ticket_id: parseInt(ticketId),
+      parent_id: parentId, // This is the key for permanence!
+      user_id: 1, 
+      content: content,
+      is_internal: activeTab.value === 'internal' ? 1 : 0
+    });
+
+    // Push the new comment to the flat list; Computed handles the nesting
+    if (res.data?.data) {
+      ticket.value.comments.push(res.data.data);
+    }
+    
+    // Reset UI
+    newCommentText.value = ''; 
+    replyText.value = ''; 
+    replyingTo.value = null;
+    triggerToast();
+  } catch (err) { 
+    console.error("Comment failed:", err);
+  } finally { 
+    submitting.value = false; 
+  }
+};
 
 const fetchData = async () => {
   try {
@@ -217,23 +253,7 @@ const confirmReassign = async () => {
 
 const selfAssign = () => { selectedAgentId.value = 1; confirmReassign(); };
 
-const submitComment = async (parentId = null) => {
-  const content = parentId ? replyText.value : newCommentText.value;
-  if (!content.trim()) return;
-  try {
-    submitting.value = true;
-    const res = await CommentService.create({
-      ticket_id: parseInt(ticketId),
-      parent_id: parentId,
-      user_id: 1, // Logged in User ID
-      content: content,
-      is_internal: activeTab.value === 'internal' ? 1 : 0
-    });
-    ticket.value.comments.push(res.data.data); // Add to flat list, computed handles the rest
-    newCommentText.value = ''; replyText.value = ''; replyingTo.value = null;
-    triggerToast();
-  } catch (err) { alert("Comment failed"); } finally { submitting.value = false; }
-};
+
 
 const triggerToast = () => {
   showSuccessToast.value = true;

@@ -1,59 +1,49 @@
 <script setup>
+import { useTickets } from "@/composables/useTickets";
 import TicketPageLayout from "@/components/TicketPageLayout.vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
-import { useTickets } from "@/composables/useTickets";
 
-// scope
-const scope = "all";
-
-// ✅ use ONLY filters
 const {
   tickets,
   stats,
   currentPage,
   lastPage,
-  loading,
-  error,
+  pageLoading,
+  tableLoading,
   filters,
   fetchTickets,
-} = useTickets({ scope });
+  statuses,
+  priorities,
+  organizations,
+} = useTickets({ scope: "all" });
 
-// ✅ Pagination
-const handlePage = (page) => {
-  if (page < 1 || page > lastPage.value) return;
-  currentPage.value = page;
-  fetchTickets(page);
-};
+const handlePage = (page) => fetchTickets(page);
 
-// ✅ Filters
+// ✅ CORRECT: use status_id, priority_id, organization_id
 const handleFilters = (f) => {
-  console.log("RECEIVED FILTERS:", f);
-
-  filters.value = { ...f };
-  currentPage.value = 1;
-  fetchTickets(1);
+  fetchTickets(1, {
+    keyword: f.keyword,
+    status_id: f.status_id,
+    priority_id: f.priority_id,
+    organization_id: f.organization_id,
+  });
 };
 </script>
 
 <template>
-  <div>
-    <LoadingSpinner v-if="loading" size="lg" color="primary" />
-
-    <p v-else-if="error" class="text-red-500 p-10 text-center">
-      Failed to load tickets.
-    </p>
-
-    <TicketPageLayout
-      v-else
-      title="All Tickets"
-      subtitle="Tickets assigned or created"
-      :filtered="tickets"
-      :stats="stats"
-      :currentPage="currentPage"
-      :lastPage="lastPage"
-      @update:filters="handleFilters"
-      @update:currentPage="handlePage"
-      mode="agent"
-    />
-  </div>
+  <LoadingSpinner v-if="pageLoading" size="lg" color="primary" />
+  <TicketPageLayout
+    v-else
+    :filtered="tickets"
+    :stats="stats"
+    :filters="filters"
+    :currentPage="currentPage"
+    :lastPage="lastPage"
+    :tableLoading="tableLoading"
+    :statuses="statuses"
+    :priorities="priorities"
+    :organizations="organizations"
+    @update:filters="handleFilters"
+    @update:currentPage="handlePage"
+  />
 </template>

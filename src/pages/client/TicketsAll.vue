@@ -1,53 +1,62 @@
 <script setup>
+import { computed, watch } from "vue";
+import { useTickets } from "@/composables/useTickets";
 import TicketPageLayout from "@/components/TicketPageLayout.vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
-import { useTickets } from "@/composables/useTickets";
+import { useAuthStore } from "@/stores/auth";
+import { debounce } from "lodash-es";
 
-// ✅ use ONLY filters
+const auth = useAuthStore();
+const clientOrgId = computed(() => auth.user?.organization?.id);
+
 const {
   tickets,
   stats,
   currentPage,
   lastPage,
-  loading,
-  error,
+  pageLoading,
+  tableLoading,
   filters,
   fetchTickets,
-} = useTickets({ scope: "organization" });
+  statuses,
+  priorities,
+} = useTickets({
+  scope: "organization",
+  forcedOrgId: clientOrgId,
+});
 
-// ✅ Pagination
-const handlePage = (page) => {
-  if (page < 1 || page > lastPage.value) return;
-  currentPage.value = page;
-  fetchTickets(page);
-};
+watch(clientOrgId, (id) => {
+  if (id) fetchTickets(1, {}, true);
+}, { immediate: true });
 
-// ✅ Filters
-const handleFilters = (f) => {
-  console.log("RECEIVED FILTERS:", f);
+const handlePage = (page) => fetchTickets(page);
 
-  filters.value = { ...f };   // ✅ important
-  currentPage.value = 1;
-  fetchTickets(1);
-};
+// ✅ CORRECT: use status_id, priority_id
+const handleFilters = debounce((f) => {
+  fetchTickets(1, {
+    keyword: f.keyword,
+    status_id: f.status_id,
+    priority_id: f.priority_id,
+  });
+}, 400);
 </script>
 
 <template>
   <div>
-    <LoadingSpinner v-if="loading" />
-
-    <p v-else-if="error" class="text-red-500 text-center p-10">
-      Failed to load tickets
-    </p>
-
+    <LoadingSpinner v-if="pageLoading" size="lg" color="primary" />
     <TicketPageLayout
-      v-if="!loading && !error"
-      title="Client Tickets"
-      subtitle="Tickets in your organization"
+      v-else
+      title="My Organization Tickets"
+      subtitle="View and manage tickets for your company"
       :filtered="tickets"
       :stats="stats"
+      :filters="filters"
+      :statuses="statuses"
+      :priorities="priorities"
+      :hideOrg="true"
       :currentPage="currentPage"
       :lastPage="lastPage"
+      :tableLoading="tableLoading"
       @update:filters="handleFilters"
       @update:currentPage="handlePage"
       mode="client"

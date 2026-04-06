@@ -120,12 +120,13 @@ const form = ref({
   sla_deadline: null
 })
 
-// --- API FETCHING ---
 onMounted(async () => {
   try {
-    const res = await PriorityService.getAll()
-    // CORRECTED PATH: res.data.data.ticketpriorities.data
-    priorities.value = res.data?.data?.ticketpriorities?.data || []
+    const prioritiesData = await PriorityService.getAll()
+    priorities.value = Array.isArray(prioritiesData) ? prioritiesData : []
+    if (!priorities.value.length) {
+      console.warn('No priorities returned from API')
+    }
   } catch (err) {
     console.error('Priority Fetch Error:', err)
     toast.error('Could not load priority levels')
@@ -154,6 +155,7 @@ const formattedSLA = computed(() => {
 
 const closeModal = () => {
   emit('close') // Signal to parent to hide modal
+  router.push('/client/tickets/all')
 }
 
 const inputClass = (field) => {
